@@ -225,7 +225,7 @@ body {
   display: flex;
   flex-direction: column;
   max-width: 200px; /* Limit maximum width */
-  aspect-ratio: 1; /* Make it square */
+  max-height: 270px;
 }
 
 .track-card:hover {
