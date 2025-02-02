@@ -31,6 +31,32 @@ const MusicDashboard = ({ token, onLogout }) => {
   const [selectedTab, setSelectedTab] = useState('recommendations');
   const [likedTracks, setLikedTracks] = useState(new Set());
 
+  const handleLike = async (trackId) => {
+    try {
+      const isLiked = likedTracks.has(trackId);
+      const method = isLiked ? 'DELETE' : 'PUT';
+      
+      const response = await fetch(`https://api.spotify.com/v1/me/tracks?ids=${trackId}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+  
+      if (response.ok) {
+        const newLikedTracks = new Set(likedTracks);
+        if (isLiked) {
+          newLikedTracks.delete(trackId);
+        } else {
+          newLikedTracks.add(trackId);
+        }
+        setLikedTracks(newLikedTracks);
+      }
+    } catch (error) {
+      console.error('Error toggling track like:', error);
+    }
+  };
+
   const handleRefresh = async () => {
     setLoading(true);
     try {
@@ -38,6 +64,26 @@ const MusicDashboard = ({ token, onLogout }) => {
     } finally {
       setLoading(false);
     }
+};
+
+const checkSavedTracks = async (trackIds) => {
+  try {
+    const response = await fetch(`https://api.spotify.com/v1/me/tracks/contains?ids=${trackIds.join(',')}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    const data = await response.json();
+    const newLikedTracks = new Set(likedTracks);
+    data.forEach((isSaved, index) => {
+      if (isSaved) {
+        newLikedTracks.add(trackIds[index]);
+      }
+    });
+    setLikedTracks(newLikedTracks);
+  } catch (error) {
+    console.error('Error checking saved tracks:', error);
+  }
 };
 
   useEffect(() => {
@@ -237,52 +283,10 @@ const handlePlayPause = async (track) => {
     }
   }
 
-  const checkSavedTracks = async (trackIds) => {
-    try {
-      const response = await fetch(`https://api.spotify.com/v1/me/tracks/contains?ids=${trackIds.join(',')}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      const newLikedTracks = new Set(likedTracks);
-      data.forEach((isSaved, index) => {
-        if (isSaved) {
-          newLikedTracks.add(trackIds[index]);
-        }
-      });
-      setLikedTracks(newLikedTracks);
-    } catch (error) {
-      console.error('Error checking saved tracks:', error);
-    }
-  };
+  
   
   // Add this function to handle liking/unliking
-  const handleLike = async (trackId) => {
-    try {
-      const isLiked = likedTracks.has(trackId);
-      const method = isLiked ? 'DELETE' : 'PUT';
-      
-      const response = await fetch(`https://api.spotify.com/v1/me/tracks?ids=${trackId}`, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
   
-      if (response.ok) {
-        const newLikedTracks = new Set(likedTracks);
-        if (isLiked) {
-          newLikedTracks.delete(trackId);
-        } else {
-          newLikedTracks.add(trackId);
-        }
-        setLikedTracks(newLikedTracks);
-      }
-    } catch (error) {
-      console.error('Error toggling track like:', error);
-    }
-  };
 };
 
   // Loading state with timeout
