@@ -256,44 +256,51 @@ useEffect(() => {
         console.log('Setting top tracks:', data.items.length, 'tracks found');
         setUserTopTracks(data.items);
         
-        // Get just 5 track IDs for seeds
+        // Get seed tracks for recommendations
         const seedTracks = data.items.slice(0, 5).map(track => track.id);
-        console.log('Seed tracks:', seedTracks);
+        console.log('Seed tracks for recommendations:', seedTracks);
         
-        // Only fetch recommendations if we have seed tracks
         if (seedTracks.length > 0) {
-          // Use seed_tracks parameter correctly
+          // Make the recommendations URL more explicit for debugging
           const recommendationsUrl = new URL('https://api.spotify.com/v1/recommendations');
           recommendationsUrl.searchParams.append('limit', '20');
-          // Join the track IDs with commas
           recommendationsUrl.searchParams.append('seed_tracks', seedTracks.join(','));
           
+          console.log('Requesting recommendations with URL:', recommendationsUrl.toString());
+  
           const recommendationsResponse = await fetch(recommendationsUrl.toString(), {
             headers: {
               Authorization: `Bearer ${token}`
             }
           });
           
-          if (recommendationsResponse.ok) {
-            const recommendationsData = await recommendationsResponse.json();
-            console.log('Recommendations data:', recommendationsData);
-            if (recommendationsData.tracks) {
-              setRecommendations(recommendationsData.tracks);
-            }
+          if (!recommendationsResponse.ok) {
+            throw new Error(`Recommendations error! status: ${recommendationsResponse.status}`);
           }
+          
+          const recommendationsData = await recommendationsResponse.json();
+          console.log('Recommendations response:', recommendationsData);
+          
+          if (recommendationsData.tracks && recommendationsData.tracks.length > 0) {
+            console.log(`Setting ${recommendationsData.tracks.length} recommendations`);
+            setRecommendations(recommendationsData.tracks);
+          } else {
+            console.log('No recommendations returned from API');
+          }
+        } else {
+          console.log('No seed tracks available for recommendations');
         }
       } else {
-        console.log('No top tracks found');
+        console.log('No top tracks found - cannot generate recommendations');
       }
     } catch (error) {
       console.error('Error in fetchUserTopTracks:', error);
     }
   };
-
   const fetchRecentlyPlayed = async () => {
     try {
       console.log('Fetching recently played...');
-      const response = await fetch('https://api.spotify.com/v1/me/player/recently-played?limit=20', {
+      const response = await fetch('https://api.spotify.com/v1/me/player/recently-played?limit=50', {
         headers: {
           Authorization: `Bearer ${token}`
         }
