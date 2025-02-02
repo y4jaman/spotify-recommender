@@ -152,7 +152,6 @@ useEffect(() => {
 
   useEffect(() => {
     if (token) {
-      console.log('Token available:', token);
       initializeData();
     }
   }, [token]);
@@ -330,39 +329,64 @@ useEffect(() => {
 
 const handlePlayPause = async (track) => {
   try {
-    // If this track is currently playing, pause it
-    if (currentTrack?.id === track.id) {
-      await fetch('https://api.spotify.com/v1/me/player/pause', {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      setCurrentTrack(null);
-      return;
+    // First get available devices
+    const deviceResponse = await fetch('https://api.spotify.com/v1/me/player/devices', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    
+    if (!deviceResponse.ok) {
+      throw new Error('Failed to get devices');
     }
 
-    // Otherwise, play the new track
-    const response = await fetch('https://api.spotify.com/v1/me/player/play', {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        uris: [track.uri]
-      })
-    });
+    const deviceData = await deviceResponse.json();
+    const activeDevice = deviceData.devices.find(device => device.is_active);
 
-    if (!response.ok) {
-      // If error occurs, open in Spotify
+    if (!activeDevice) {
+      // No active device - open in Spotify instead
       window.open(track.external_urls.spotify, '_blank');
       return;
     }
 
-    setCurrentTrack(track);
+    if (currentTrack?.id === track.id && isActive) {
+      // Pause the current track
+      const response = await fetch(`https://api.spotify.com/v1/me/player/pause?device_id=${activeDevice.id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to pause');
+      }
+
+      setIsActive(false);
+    } else {
+      // Play the new track
+      const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${activeDevice.id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          uris: [track.uri]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to play');
+      }
+
+      setCurrentTrack(track);
+      setIsActive(true);
+    }
   } catch (error) {
-    console.error('Error controlling playback:', error);
+    console.error('Playback error:', error);
+    // Fallback to opening in Spotify
     window.open(track.external_urls.spotify, '_blank');
   }
 };
@@ -378,14 +402,6 @@ const handlePlayPause = async (track) => {
 
     return () => clearTimeout(timeoutId);
   }, [loading]);
-
-  console.log('Current state:', {
-    loading,
-    hasUserData: !!userData,
-    topTracksCount: userTopTracks.length,
-    recommendationsCount: recommendations.length,
-    recentlyPlayedCount: recentlyPlayed.length
-  });
 
   if (loading && (!userData || !userTopTracks.length)) {
     return (
