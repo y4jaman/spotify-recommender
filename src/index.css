@@ -347,9 +347,18 @@ body {
   opacity: 1;
 }
 
+.like-button.liked {
+  background: rgba(29, 185, 84, 0.3);
+  opacity: 1;
+}
+
 .like-button:hover {
   background: rgba(0, 0, 0, 0.7);
   transform: scale(1.1);
+}
+
+.like-button.liked:hover {
+  background: rgba(29, 185, 84, 0.4);
 }
 
 /* Loading State */
@@ -514,3 +523,4 @@ body {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+

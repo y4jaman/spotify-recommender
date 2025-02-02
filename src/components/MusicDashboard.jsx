@@ -29,6 +29,7 @@ const MusicDashboard = ({ token, onLogout }) => {
   const [currentTrack, setCurrentTrack] = useState(null);
   const [userData, setUserData] = useState(null);
   const [selectedTab, setSelectedTab] = useState('recommendations');
+  const [likedTracks, setLikedTracks] = useState(new Set());
 
   const handleRefresh = async () => {
     setLoading(true);
@@ -41,10 +42,13 @@ const MusicDashboard = ({ token, onLogout }) => {
 
   useEffect(() => {
     if (token) {
-      console.log('Token available:', token);
       initializeData();
+      const tracks = [...userTopTracks, ...recommendations, ...recentlyPlayed];
+    if (tracks.length > 0) {
+      checkSavedTracks(tracks.map(track => track.id));
     }
-  }, [token]);
+    }
+  }, [token, userTopTracks, recommendations, recentlyPlayed]);
 
   const initializeData = async () => {
     setLoading(true);
@@ -221,6 +225,53 @@ const handlePlayPause = async (track) => {
       alert('Error playing track. Make sure Spotify is open and you have an active Premium subscription.');
     }
   }
+
+  const checkSavedTracks = async (trackIds) => {
+    try {
+      const response = await fetch(`https://api.spotify.com/v1/me/tracks/contains?ids=${trackIds.join(',')}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      const newLikedTracks = new Set(likedTracks);
+      data.forEach((isSaved, index) => {
+        if (isSaved) {
+          newLikedTracks.add(trackIds[index]);
+        }
+      });
+      setLikedTracks(newLikedTracks);
+    } catch (error) {
+      console.error('Error checking saved tracks:', error);
+    }
+  };
+  
+  // Add this function to handle liking/unliking
+  const handleLike = async (trackId) => {
+    try {
+      const isLiked = likedTracks.has(trackId);
+      const method = isLiked ? 'DELETE' : 'PUT';
+      
+      const response = await fetch(`https://api.spotify.com/v1/me/tracks?ids=${trackId}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+  
+      if (response.ok) {
+        const newLikedTracks = new Set(likedTracks);
+        if (isLiked) {
+          newLikedTracks.delete(trackId);
+        } else {
+          newLikedTracks.add(trackId);
+        }
+        setLikedTracks(newLikedTracks);
+      }
+    } catch (error) {
+      console.error('Error toggling track like:', error);
+    }
+  };
 };
 
   // Loading state with timeout
@@ -357,9 +408,15 @@ const handlePlayPause = async (track) => {
                   <h3>{track.name}</h3>
                   <p>{track.artists[0].name}</p>
                 </div>
-                <button className="like-button">
-                  <Heart size={16} />
-                </button>
+                <button 
+  className={`like-button ${likedTracks.has(track.id) ? 'liked' : ''}`}
+  onClick={() => handleLike(track.id)}
+>
+  <Heart 
+    size={16} 
+    fill={likedTracks.has(track.id) ? 'currentColor' : 'none'} 
+  />
+</button>
               </div>
             ))
           ) : (
