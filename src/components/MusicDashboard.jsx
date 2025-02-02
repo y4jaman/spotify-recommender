@@ -247,14 +247,15 @@ const handlePlayPause = async (track) => {
       });
       
       const deviceData = await deviceResponse.json();
-      console.log('Available devices:', deviceData);
 
-      if (!deviceData.devices || deviceData.devices.length === 0) {
-        alert('Please open Spotify on any device to play tracks');
+      // If no devices or not Premium, open in Spotify instead
+      if (!deviceData.devices || deviceData.devices.length === 0 || response.status === 403) {
+        // Open track in Spotify
+        window.open(track.external_urls.spotify, '_blank');
         return;
       }
 
-      // Try to play on the first available device
+      // If we get here, try to play (Premium users only)
       const deviceId = deviceData.devices[0].id;
       const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
         method: 'PUT',
@@ -267,26 +268,19 @@ const handlePlayPause = async (track) => {
         })
       });
 
-      if (!response.ok) {
-        if (response.status === 403) {
-          alert('Please open Spotify Premium to control playback');
-        } else {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+      if (response.status === 403) {
+        // Open in Spotify if not Premium
+        window.open(track.external_urls.spotify, '_blank');
         return;
       }
 
       setCurrentTrack(track);
     } catch (error) {
       console.error('Error playing track:', error);
-      alert('Error playing track. Make sure Spotify is open and you have an active Premium subscription.');
+      // Fallback to opening in Spotify
+      window.open(track.external_urls.spotify, '_blank');
     }
   }
-
-  
-  
-  // Add this function to handle liking/unliking
-  
 };
 
   // Loading state with timeout
