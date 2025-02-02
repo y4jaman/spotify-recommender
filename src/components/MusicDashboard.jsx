@@ -32,6 +32,7 @@ const MusicDashboard = ({ token, onLogout }) => {
   const [likedTracks, setLikedTracks] = useState(new Set());
   const [player, setPlayer] = useState(null);
   const [deviceId, setDeviceId] = useState(null);
+  const [isActive, setIsActive] = useState(false);
   const [playbackState, setPlaybackState] = useState(null);
 
   const handleLike = async (trackId) => {
