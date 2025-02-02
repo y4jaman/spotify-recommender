@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="45" fill="#1DB954"/>
+  <g transform="translate(20,30)">
+    <!-- Left triangle -->
+    <path d="M0 20 L20 0 L20 40 Z" fill="#000000"/>
+    <!-- Middle triangle -->
+    <path d="M15 20 L35 0 L35 40 Z" fill="#000000"/>
+    <!-- Right triangle -->
+    <path d="M30 20 L50 0 L50 40 Z" fill="#000000"/>
+  </g>
+</svg>
