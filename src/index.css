@@ -209,6 +209,7 @@ body {
 .tracks-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-auto-rows: min-content; /* This ensures rows are as compact as possible */
   gap: 1.5rem;
   padding: 1rem;
   overflow-y: auto;
