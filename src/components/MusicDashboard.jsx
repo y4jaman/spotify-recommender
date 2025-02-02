@@ -153,15 +153,25 @@ const MusicDashboard = ({ token, onLogout }) => {
       console.log('Recently played raw data:', data);
       
       if (data.items && data.items.length > 0) {
-        console.log('Setting recently played:', data.items.length, 'tracks found');
-        setRecentlyPlayed(data.items.map(item => item.track));
+        // Remove duplicates based on track ID
+        const uniqueTracks = data.items.reduce((acc, current) => {
+          const x = acc.find(item => item.track.id === current.track.id);
+          if (!x) {
+            return acc.concat([current]);
+          } else {
+            return acc;
+          }
+        }, []);
+        
+        console.log('Setting recently played:', uniqueTracks.length, 'unique tracks found');
+        setRecentlyPlayed(uniqueTracks.map(item => item.track));
       } else {
         console.log('No recently played tracks found');
       }
     } catch (error) {
       console.error('Error in fetchRecentlyPlayed:', error);
     }
-  };
+};
 
   const handlePlayPause = async (track) => {
     if (currentTrack?.id === track.id) {
