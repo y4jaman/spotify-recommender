@@ -173,27 +173,55 @@ const MusicDashboard = ({ token, onLogout }) => {
     }
 };
 
-  const handlePlayPause = async (track) => {
-    if (currentTrack?.id === track.id) {
-      setCurrentTrack(null);
-    } else {
-      setCurrentTrack(track);
-      try {
-        await fetch(`https://api.spotify.com/v1/me/player/play`, {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            uris: [track.uri]
-          })
-        });
-      } catch (error) {
-        console.error('Error playing track:', error);
+const handlePlayPause = async (track) => {
+  if (currentTrack?.id === track.id) {
+    setCurrentTrack(null);
+  } else {
+    try {
+      // First check for available devices
+      const deviceResponse = await fetch('https://api.spotify.com/v1/me/player/devices', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      const deviceData = await deviceResponse.json();
+      console.log('Available devices:', deviceData);
+
+      if (!deviceData.devices || deviceData.devices.length === 0) {
+        alert('Please open Spotify on any device to play tracks');
+        return;
       }
+
+      // Try to play on the first available device
+      const deviceId = deviceData.devices[0].id;
+      const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uris: [track.uri]
+        })
+      });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          alert('Please open Spotify Premium to control playback');
+        } else {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return;
+      }
+
+      setCurrentTrack(track);
+    } catch (error) {
+      console.error('Error playing track:', error);
+      alert('Error playing track. Make sure Spotify is open and you have an active Premium subscription.');
     }
-  };
+  }
+};
 
   // Loading state with timeout
   useEffect(() => {

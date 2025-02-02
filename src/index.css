@@ -208,11 +208,12 @@ body {
 /* Tracks Grid */
 .tracks-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 200px)); /* Fixed width */
   gap: 1.5rem;
   padding: 1rem;
   overflow-y: auto;
   height: calc(100vh - 150px);
+  justify-content: center; /* Center the grid */
 }
 
 .track-card {
@@ -224,8 +225,8 @@ body {
   border: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
-  max-width: 200px; /* Limit maximum width */
-  aspect-ratio: 1; /* Make it square */
+  width: 200px; /* Fixed width */
+  height: 200px; /* Fixed height */
 }
 
 .track-card:hover {
@@ -236,7 +237,7 @@ body {
 .track-artwork {
   position: relative;
   width: 100%;
-  aspect-ratio: 1;
+  height: 130px; /* Fixed height for artwork */
   border-radius: 16px;
   overflow: hidden;
   margin-bottom: 0.75rem;
@@ -249,9 +250,8 @@ body {
 }
 
 .track-info {
-  padding: 0;
+  height: 45px; /* Fixed height for text */
   overflow: hidden;
-  flex-grow: 0; /* Prevent growing */
 }
 
 .track-info h3 {
