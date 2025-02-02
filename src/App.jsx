@@ -38,7 +38,8 @@ function App() {
     "user-read-playback-state",
     "streaming",
     "user-read-playback-position",
-    "user-library-modify"
+    "user-library-modify",
+    "user-library-read"
     ].join(" ");
 
     window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=${RESPONSE_TYPE}&scope=${encodeURIComponent(SCOPE)}`;
