@@ -25,7 +25,7 @@ function App() {
 
   const login = () => {
     const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
-    const REDIRECT_URI = "http://localhost:5173";
+    const REDIRECT_URI = "https://spotify-recommender-ten.vercel.app/";
     const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
     const RESPONSE_TYPE = "token";
     const SCOPE = [
