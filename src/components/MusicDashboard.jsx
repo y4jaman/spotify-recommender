@@ -248,14 +248,13 @@ const handlePlayPause = async (track) => {
       
       const deviceData = await deviceResponse.json();
 
-      // If no devices or not Premium, open in Spotify instead
-      if (!deviceData.devices || deviceData.devices.length === 0 || response.status === 403) {
-        // Open track in Spotify
+      // If no devices, open in Spotify
+      if (!deviceData.devices || deviceData.devices.length === 0) {
         window.open(track.external_urls.spotify, '_blank');
         return;
       }
 
-      // If we get here, try to play (Premium users only)
+      // Try to play (Premium users only)
       const deviceId = deviceData.devices[0].id;
       const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
         method: 'PUT',
@@ -268,8 +267,8 @@ const handlePlayPause = async (track) => {
         })
       });
 
-      if (response.status === 403) {
-        // Open in Spotify if not Premium
+      if (!response.ok) {
+        // If forbidden (not Premium) or other error, open in Spotify
         window.open(track.external_urls.spotify, '_blank');
         return;
       }
@@ -282,7 +281,6 @@ const handlePlayPause = async (track) => {
     }
   }
 };
-
   // Loading state with timeout
   useEffect(() => {
     const timeoutId = setTimeout(() => {
