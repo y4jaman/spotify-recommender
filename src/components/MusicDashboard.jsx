@@ -89,31 +89,50 @@ const checkSavedTracks = async (trackIds) => {
   }
 };
 
+// Update the fetchCurrentPlayback function
+const fetchCurrentPlayback = async () => {
+  try {
+    const response = await fetch('https://api.spotify.com/v1/me/player', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    
+    // If response is 204 (no content) or empty, it means nothing is playing
+    if (response.status === 204 || !response.ok) {
+      setCurrentTrack(null);
+      setIsActive(false);
+      return;
+    }
+
+    const data = await response.json();
+    // Only update if we have data
+    if (data && data.item) {
+      setCurrentTrack(data.item);
+      setIsActive(data.is_playing);
+    } else {
+      setCurrentTrack(null);
+      setIsActive(false);
+    }
+  } catch (error) {
+    // Don't log the error if it's just no content
+    if (error.message !== "Unexpected end of JSON input") {
+      console.error('Error fetching playback state:', error);
+    }
+    setCurrentTrack(null);
+    setIsActive(false);
+  }
+};
+
+// Update the polling interval to be less frequent to avoid rate limiting
 useEffect(() => {
   if (!token) return;
 
-  const fetchCurrentPlayback = async () => {
-    try {
-      const response = await fetch('https://api.spotify.com/v1/me/player', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.item) {
-          setCurrentTrack(data.item);
-          setIsActive(data.is_playing);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching playback state:', error);
-    }
-  };
+  // Initial fetch
+  fetchCurrentPlayback();
 
-  // Poll for playback state every 1 second
-  const interval = setInterval(fetchCurrentPlayback, 1000);
+  // Poll every 3 seconds instead of 1
+  const interval = setInterval(fetchCurrentPlayback, 3000);
 
   return () => clearInterval(interval);
 }, [token]);
