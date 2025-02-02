@@ -42,11 +42,22 @@ const MusicDashboard = ({ token, onLogout }) => {
 
   useEffect(() => {
     if (token) {
+      console.log('Token available:', token);
       initializeData();
-      const tracks = [...userTopTracks, ...recommendations, ...recentlyPlayed];
-    if (tracks.length > 0) {
-      checkSavedTracks(tracks.map(track => track.id));
     }
+  }, [token]);
+
+  useEffect(() => {
+    const checkLikedStatus = async () => {
+      const allTracks = [...userTopTracks, ...recommendations, ...recentlyPlayed];
+      const uniqueTrackIds = [...new Set(allTracks.map(track => track.id))];
+      if (uniqueTrackIds.length > 0) {
+        await checkSavedTracks(uniqueTrackIds);
+      }
+    };
+
+    if (token) {
+      checkLikedStatus();
     }
   }, [token, userTopTracks, recommendations, recentlyPlayed]);
 
