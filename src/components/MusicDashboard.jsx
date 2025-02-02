@@ -107,16 +107,29 @@ const fetchCurrentPlayback = async () => {
     }
 
     const data = await response.json();
-    // Only update if we have data
+    // Update current track and active state based on what's playing in Spotify
     if (data && data.item) {
-      setCurrentTrack(data.item);
+      // Find the track in our lists that matches the currently playing track
+      const playingTrackId = data.item.id;
+      const allTracks = [
+        ...userTopTracks, 
+        ...recommendations, 
+        ...recentlyPlayed
+      ];
+      const matchingTrack = allTracks.find(track => track.id === playingTrackId);
+      
+      if (matchingTrack) {
+        setCurrentTrack(matchingTrack);
+      } else {
+        // If the track isn't in our lists, still update the current track
+        setCurrentTrack(data.item);
+      }
       setIsActive(data.is_playing);
     } else {
       setCurrentTrack(null);
       setIsActive(false);
     }
   } catch (error) {
-    // Don't log the error if it's just no content
     if (error.message !== "Unexpected end of JSON input") {
       console.error('Error fetching playback state:', error);
     }
@@ -124,7 +137,6 @@ const fetchCurrentPlayback = async () => {
     setIsActive(false);
   }
 };
-
 // Update the polling interval to be less frequent to avoid rate limiting
 useEffect(() => {
   if (!token) return;
@@ -477,12 +489,12 @@ const handlePlayPause = async (track) => {
                     alt={track.name}
                   />
                   <div className="track-overlay">
-                    <button 
-                      className="play-button"
-                      onClick={() => handlePlayPause(track)}
-                    >
-                      {currentTrack?.id === track.id ? <Pause size={24} /> : <Play size={24} />}
-                    </button>
+                  <button 
+  className="play-button"
+  onClick={() => handlePlayPause(track)}
+>
+  {currentTrack?.id === track.id && isActive ? <Pause size={24} /> : <Play size={24} />}
+</button>
                   </div>
                 </div>
                 <div className="track-info">
