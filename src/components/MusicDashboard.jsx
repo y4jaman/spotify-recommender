@@ -30,6 +30,15 @@ const MusicDashboard = ({ token, onLogout }) => {
   const [userData, setUserData] = useState(null);
   const [selectedTab, setSelectedTab] = useState('recommendations');
 
+  const handleRefresh = async () => {
+    setLoading(true);
+    try {
+      await fetchRecentlyPlayed();
+    } finally {
+      setLoading(false);
+    }
+};
+
   useEffect(() => {
     if (token) {
       console.log('Token available:', token);
@@ -269,11 +278,23 @@ const MusicDashboard = ({ token, onLogout }) => {
       {/* Main Content */}
       <div className="dashboard-content">
         <div className="content-header">
-          <h1>
-            {selectedTab === 'recommendations' && 'Recommended for You'}
-            {selectedTab === 'top-tracks' && 'Your Top Tracks'}
-            {selectedTab === 'recent' && 'Recently Played'}
-          </h1>
+          <div className="header-with-refresh">
+            <h1>
+              {selectedTab === 'recommendations' && 'Recommended for You'}
+              {selectedTab === 'top-tracks' && 'Your Top Tracks'}
+              {selectedTab === 'recent' && 'Recently Played'}
+            </h1>
+            {selectedTab === 'recent' && (
+              <button 
+                onClick={handleRefresh}
+                className="refresh-button"
+                disabled={loading}
+              >
+                <RefreshCw size={20} className={loading ? 'spinning' : ''} />
+                Refresh
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="tracks-grid">

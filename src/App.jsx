@@ -30,13 +30,14 @@ function App() {
     const RESPONSE_TYPE = "token";
     const SCOPE = [
         "user-read-private",
-        "user-read-email",
-        "user-top-read",
-        "user-library-read",
-        "user-read-recently-played",
-        "user-modify-playback-state",
-        "user-read-playback-state",
-        "streaming"
+    "user-read-email",
+    "user-top-read",
+    "user-library-read",
+    "user-read-recently-played",
+    "user-modify-playback-state",
+    "user-read-playback-state",
+    "streaming",
+    "user-read-playback-position"
     ].join(" ");
 
     window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=${RESPONSE_TYPE}&scope=${encodeURIComponent(SCOPE)}`;
