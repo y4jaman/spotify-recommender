@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, Heart, LogOut, Music2, Radio, Clock } from 'lucide-react';
+import { Play, Pause, Heart, LogOut, Music2, Radio, Clock, RefreshCw } from 'lucide-react';
 
 const EmptyState = ({ type }) => (
   <div className="empty-state">
