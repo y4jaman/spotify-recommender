@@ -32,6 +32,7 @@ const MusicDashboard = ({ token, onLogout }) => {
   const [likedTracks, setLikedTracks] = useState(new Set());
   const [player, setPlayer] = useState(null);
   const [deviceId, setDeviceId] = useState(null);
+  const [playbackState, setPlaybackState] = useState(null);
 
   const handleLike = async (trackId) => {
     try {
@@ -87,6 +88,35 @@ const checkSavedTracks = async (trackIds) => {
     console.error('Error checking saved tracks:', error);
   }
 };
+
+useEffect(() => {
+  if (!token) return;
+
+  const fetchCurrentPlayback = async () => {
+    try {
+      const response = await fetch('https://api.spotify.com/v1/me/player', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.item) {
+          setCurrentTrack(data.item);
+          setIsActive(data.is_playing);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching playback state:', error);
+    }
+  };
+
+  // Poll for playback state every 1 second
+  const interval = setInterval(fetchCurrentPlayback, 1000);
+
+  return () => clearInterval(interval);
+}, [token]);
 
   useEffect(() => {
     if (token) {
@@ -267,47 +297,40 @@ const checkSavedTracks = async (trackIds) => {
 };
 
 const handlePlayPause = async (track) => {
-  if (!deviceId) {
-    // If no SDK player is available, open in Spotify
-    window.open(track.external_urls.spotify, '_blank');
-    return;
-  }
-
   try {
+    // If this track is currently playing, pause it
     if (currentTrack?.id === track.id) {
-      // Pause the current track
       await fetch('https://api.spotify.com/v1/me/player/pause', {
         method: 'PUT',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`
         }
       });
       setCurrentTrack(null);
-    } else {
-      // Play the new track
-      const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          uris: [track.uri],
-          position_ms: 0,
-        })
-      });
-
-      if (!response.ok) {
-        // If error (like no Premium), open in Spotify
-        window.open(track.external_urls.spotify, '_blank');
-        return;
-      }
-
-      setCurrentTrack(track);
+      return;
     }
+
+    // Otherwise, play the new track
+    const response = await fetch('https://api.spotify.com/v1/me/player/play', {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        uris: [track.uri]
+      })
+    });
+
+    if (!response.ok) {
+      // If error occurs, open in Spotify
+      window.open(track.external_urls.spotify, '_blank');
+      return;
+    }
+
+    setCurrentTrack(track);
   } catch (error) {
     console.error('Error controlling playback:', error);
-    // Fallback to opening in Spotify
     window.open(track.external_urls.spotify, '_blank');
   }
 };
