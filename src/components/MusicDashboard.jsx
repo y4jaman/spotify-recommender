@@ -35,6 +35,24 @@ const MusicDashboard = ({ token, onLogout }) => {
   const [isActive, setIsActive] = useState(false);
   const [playbackState, setPlaybackState] = useState(null);
 
+  useEffect(() => {
+    if (!token) return;
+  
+    window.onSpotifyWebPlaybackSDKReady = () => {
+      const player = new window.Spotify.Player({
+        name: 'Spotify Recommender Player',
+        getOAuthToken: cb => { cb(token); }
+      });
+      setPlayer(player);
+    };
+  
+    return () => {
+      if (player) {
+        player.disconnect();
+      }
+    };
+  }, [token]);
+
   const handleLike = async (trackId) => {
     try {
       const isLiked = likedTracks.has(trackId);
@@ -238,7 +256,6 @@ useEffect(() => {
 
   const fetchUserTopTracks = async () => {
     try {
-      console.log('Fetching top tracks...');
       const response = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=long_term', {
         headers: {
           Authorization: `Bearer ${token}`
@@ -250,51 +267,48 @@ useEffect(() => {
       }
       
       const data = await response.json();
-      console.log('Top tracks raw data:', data);
       
-      if (data.items && data.items.length > 0) {
-        console.log('Setting top tracks:', data.items.length, 'tracks found');
-        setUserTopTracks(data.items);
-        
-        // Get seed tracks for recommendations
-        const seedTracks = data.items.slice(0, 5).map(track => track.id);
-        console.log('Seed tracks for recommendations:', seedTracks);
-        
-        if (seedTracks.length > 0) {
-          // Make the recommendations URL more explicit for debugging
-          const recommendationsUrl = new URL('https://api.spotify.com/v1/recommendations');
-          recommendationsUrl.searchParams.append('limit', '20');
-          recommendationsUrl.searchParams.append('seed_tracks', seedTracks.join(','));
-          
-          console.log('Requesting recommendations with URL:', recommendationsUrl.toString());
-  
-          const recommendationsResponse = await fetch(recommendationsUrl.toString(), {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-          
-          if (!recommendationsResponse.ok) {
-            throw new Error(`Recommendations error! status: ${recommendationsResponse.status}`);
-          }
-          
-          const recommendationsData = await recommendationsResponse.json();
-          console.log('Recommendations response:', recommendationsData);
-          
-          if (recommendationsData.tracks && recommendationsData.tracks.length > 0) {
-            console.log(`Setting ${recommendationsData.tracks.length} recommendations`);
-            setRecommendations(recommendationsData.tracks);
-          } else {
-            console.log('No recommendations returned from API');
-          }
-        } else {
-          console.log('No seed tracks available for recommendations');
-        }
-      } else {
-        console.log('No top tracks found - cannot generate recommendations');
+      if (!data.items?.length) {
+        console.log('No top tracks found');
+        return;
       }
+  
+      setUserTopTracks(data.items);
+      
+      const seedTracks = data.items.slice(0, 5).map(track => track.id);
+      await fetchRecommendations(seedTracks);
+  
     } catch (error) {
       console.error('Error in fetchUserTopTracks:', error);
+    }
+  };
+  
+  const fetchRecommendations = async (seedTracks) => {
+    if (!seedTracks?.length) return;
+  
+    try {
+      const params = new URLSearchParams({
+        limit: '20',
+        seed_tracks: seedTracks.join(','),
+        min_popularity: '20'
+      });
+  
+      const response = await fetch(`https://api.spotify.com/v1/recommendations?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Recommendations error! status: ${response.status}`);
+      }
+  
+      const data = await response.json();
+      if (data.tracks?.length) {
+        setRecommendations(data.tracks);
+      }
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
     }
   };
   const fetchRecentlyPlayed = async () => {

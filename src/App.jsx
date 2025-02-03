@@ -6,17 +6,37 @@ function App() {
   const [token, setToken] = useState(null)
 
   useEffect(() => {
-    const hash = window.location.hash
-    let token = window.localStorage.getItem("token")
-
-    if (!token && hash) {
-      token = hash.substring(1).split("&").find(elem => elem.startsWith("access_token")).split("=")[1]
-      window.location.hash = ""
-      window.localStorage.setItem("token", token)
+    const verifyToken = async (token) => {
+      try {
+        const response = await fetch('https://api.spotify.com/v1/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!response.ok) {
+          localStorage.removeItem('token');
+          setToken(null);
+        }
+      } catch (error) {
+        localStorage.removeItem('token');
+        setToken(null);
+      }
+    };
+ 
+    // Check for existing token
+    const existingToken = localStorage.getItem('token');
+    if (existingToken) {
+      verifyToken(existingToken);
+      setToken(existingToken);
     }
-
-    setToken(token)
-  }, [])
+ 
+    // Check URL hash for new token
+    const hash = window.location.hash;
+    if (!existingToken && hash) {
+      const newToken = hash.substring(1).split("&").find(elem => elem.startsWith("access_token")).split("=")[1];
+      localStorage.setItem('token', newToken);
+      setToken(newToken);
+      window.location.hash = "";
+    }
+  }, []);
 
   const logout = () => {
     window.localStorage.removeItem("token")
