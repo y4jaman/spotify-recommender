@@ -303,12 +303,43 @@ useEffect(() => {
         ...savedTrackIds
       ]);
       
-      // Flatten tracks and apply filtering
+      // Check saved status for all tracks
+      const trackIdsToCheck = artistTopTracks
+        .flatMap(artistTrack => artistTrack.tracks)
+        .map(track => track.id)
+        .filter(id => !excludedTrackIds.has(id));
+      
+      // Batch check saved tracks
+      const MAX_TRACKS_PER_REQUEST = 50;
+      const savedStatusChunks = [];
+      for (let i = 0; i < trackIdsToCheck.length; i += MAX_TRACKS_PER_REQUEST) {
+        const chunk = trackIdsToCheck.slice(i, i + MAX_TRACKS_PER_REQUEST);
+        const response = await fetch(`https://api.spotify.com/v1/me/tracks/contains?ids=${chunk.join(',')}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+          console.warn('Failed to check saved tracks');
+          continue;
+        }
+        
+        const savedStatus = await response.json();
+        savedStatusChunks.push(...savedStatus.map((isSaved, index) => ({
+          trackId: chunk[index],
+          isSaved
+        })));
+      }
+      
+      // Add newly found saved tracks to exclusion set
+      savedStatusChunks
+        .filter(item => item.isSaved)
+        .forEach(item => excludedTrackIds.add(item.trackId));
+      
+      // Final filtering of tracks
       const seenTrackIds = new Set();
       const potentialTracks = artistTopTracks
         .flatMap(artistTrack => artistTrack.tracks)
         .filter(track => {
-          // Rigorous filtering conditions
           if (!track || !track.id) return false;
           
           // Exclude if:
