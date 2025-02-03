@@ -247,59 +247,60 @@ useEffect(() => {
       
       const topTracks = await topTracksResponse.json();
       
-      // Get recently played to filter out
-      const recentlyPlayedResponse = await fetch('https://api.spotify.com/v1/me/player/recently-played?limit=100', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (!recentlyPlayedResponse.ok) {
-        throw new Error(`Recently played fetch failed: ${recentlyPlayedResponse.status}`);
-      }
-      
-      const recentlyPlayed = await recentlyPlayedResponse.json();
-      const heardTrackIds = new Set(recentlyPlayed.items.map(item => item.track.id));
-      
-      // Get user's saved tracks to also filter out
-      const savedTracksResponse = await fetch('https://api.spotify.com/v1/me/tracks?limit=50', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (!savedTracksResponse.ok) {
-        throw new Error(`Saved tracks fetch failed: ${savedTracksResponse.status}`);
-      }
-      
-      const savedTracks = await savedTracksResponse.json();
-      const savedTrackIds = new Set(savedTracks.items.map(item => item.track.id));
-      
       // Get artist information for top tracks
       const artistIds = [...new Set(topTracks.items.map(track => track.artists[0].id))].slice(0, 5);
       
       // Fetch top tracks for these artists
-      const artistTrackPromises = artistIds.map(artistId => 
-        fetch(`https://api.spotify.com/v1/artists/${artistId}/top-tracks?market=US`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }).then(res => res.json())
-      );
+      const artistTrackPromises = artistIds.map(async (artistId) => {
+        try {
+          const response = await fetch(`https://api.spotify.com/v1/artists/${artistId}/top-tracks?market=US`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          if (!response.ok) {
+            console.warn(`Failed to fetch top tracks for artist ${artistId}`);
+            return { tracks: [] };
+          }
+          
+          return response.json();
+        } catch (error) {
+          console.warn(`Error fetching tracks for artist ${artistId}:`, error);
+          return { tracks: [] };
+        }
+      });
       
       const artistTopTracks = await Promise.all(artistTrackPromises);
       
-      // Flatten and filter tracks
+      // Flatten tracks and apply filtering
       const potentialTracks = artistTopTracks
         .flatMap(artistTrack => artistTrack.tracks)
-        .filter(track => 
-          !heardTrackIds.has(track.id) && 
-          !savedTrackIds.has(track.id)
-        )
+        .filter(track => track && track.id) // Ensure track exists and has an ID
         .sort((a, b) => b.popularity - a.popularity)
         .slice(0, 50);
       
-      setRecommendations(potentialTracks);
+      // Update state with recommendations
+      if (typeof setRecommendations === 'function') {
+        setRecommendations(potentialTracks);
+      } else {
+        console.warn('setRecommendations is not a function');
+      }
+      
+      return potentialTracks;
       
     } catch (error) {
       console.error('Error generating recommendations:', error);
-      setError('Failed to fetch recommendations. Please try again.');
+      
+      // Check if setError is a function before calling
+      if (typeof setError === 'function') {
+        setError('Failed to fetch recommendations. Please try again.');
+      } else {
+        console.warn('setError is not a function');
+      }
+      
+      return [];
     }
   };
+
   const fetchRecentlyPlayed = async () => {
     try {
       console.log('Fetching recently played...');
