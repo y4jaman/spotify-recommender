@@ -272,9 +272,17 @@ useEffect(() => {
       const artistTopTracks = await Promise.all(artistTrackPromises);
       
       // Flatten tracks and apply filtering
+      const seenTrackIds = new Set();
       const potentialTracks = artistTopTracks
         .flatMap(artistTrack => artistTrack.tracks)
-        .filter(track => track && track.id) // Ensure track exists and has an ID
+        .filter(track => {
+          // Remove duplicates and ensure track exists and has an ID
+          if (!track || !track.id || seenTrackIds.has(track.id)) {
+            return false;
+          }
+          seenTrackIds.add(track.id);
+          return true;
+        })
         .sort((a, b) => b.popularity - a.popularity)
         .slice(0, 50);
       
