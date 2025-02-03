@@ -234,34 +234,41 @@ useEffect(() => {
       console.error('Error in fetchUserTopTracks:', error);
     }
   };
-  
+
   const fetchRecommendations = async (seedTracks) => {
     if (!seedTracks?.length) return;
   
     try {
-      // Use only one seed track for testing
       const params = new URLSearchParams({
         limit: '20',
-        seed_tracks: seedTracks[0], // Use single seed track initially
-        market: 'US'
+        seed_tracks: seedTracks[0],
+        market: 'US',
+        max_popularity: 100,
+        min_popularity: 0
       });
   
-      console.log('Using seed track:', seedTracks[0]);
-  
-      const response = await fetch(`https://api.spotify.com/v1/recommendations?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await fetch('https://api.spotify.com/v1/recommendations?' + params, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
       });
+  
+      console.log('Response status:', response.status);
+      const text = await response.text();
+      console.log('Response text:', text);
   
       if (!response.ok) {
         throw new Error(`Recommendations error! status: ${response.status}`);
       }
   
-      const data = await response.json();
+      const data = JSON.parse(text);
       setRecommendations(data.tracks || []);
     } catch (error) {
-      console.error('Error fetching recommendations:', error);
+      console.error('Full error details:', error);
     }
   };
+
   const fetchRecentlyPlayed = async () => {
     try {
       console.log('Fetching recently played...');
