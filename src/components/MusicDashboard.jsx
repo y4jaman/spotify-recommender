@@ -364,7 +364,6 @@ useEffect(() => {
           }
         }, []);
         
-        console.log('Setting recently played:', uniqueTracks.length, 'unique tracks found');
         setRecentlyPlayed(uniqueTracks.map(item => item.track));
       } else {
         console.log('No recently played tracks found');
