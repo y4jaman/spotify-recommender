@@ -234,7 +234,6 @@ useEffect(() => {
     }
   };
   
- 
   const fetchNewRecommendations = async () => {
     try {
       // Get user's top tracks
@@ -249,7 +248,7 @@ useEffect(() => {
       const topTracks = await topTracksResponse.json();
       
       // Get recently played to filter out
-      const recentlyPlayedResponse = await fetch('https://api.spotify.com/v1/me/player/recently-played?limit=50', {
+      const recentlyPlayedResponse = await fetch('https://api.spotify.com/v1/me/player/recently-played?limit=100', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -259,6 +258,18 @@ useEffect(() => {
       
       const recentlyPlayed = await recentlyPlayedResponse.json();
       const heardTrackIds = new Set(recentlyPlayed.items.map(item => item.track.id));
+      
+      // Get user's saved tracks to also filter out
+      const savedTracksResponse = await fetch('https://api.spotify.com/v1/me/tracks?limit=50', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (!savedTracksResponse.ok) {
+        throw new Error(`Saved tracks fetch failed: ${savedTracksResponse.status}`);
+      }
+      
+      const savedTracks = await savedTracksResponse.json();
+      const savedTrackIds = new Set(savedTracks.items.map(item => item.track.id));
       
       // Get artist information for top tracks
       const artistIds = [...new Set(topTracks.items.map(track => track.artists[0].id))].slice(0, 5);
@@ -275,9 +286,12 @@ useEffect(() => {
       // Flatten and filter tracks
       const potentialTracks = artistTopTracks
         .flatMap(artistTrack => artistTrack.tracks)
-        .filter(track => !heardTrackIds.has(track.id))
+        .filter(track => 
+          !heardTrackIds.has(track.id) && 
+          !savedTrackIds.has(track.id)
+        )
         .sort((a, b) => b.popularity - a.popularity)
-        .slice(0, 20);
+        .slice(0, 50);
       
       setRecommendations(potentialTracks);
       
@@ -286,7 +300,6 @@ useEffect(() => {
       setError('Failed to fetch recommendations. Please try again.');
     }
   };
-
   const fetchRecentlyPlayed = async () => {
     try {
       console.log('Fetching recently played...');
