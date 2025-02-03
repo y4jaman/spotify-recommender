@@ -303,7 +303,7 @@ useEffect(() => {
         ...savedTrackIds
       ]);
       
-      // Flatten tracks and apply advanced filtering
+      // Flatten tracks and apply filtering
       const seenTrackIds = new Set();
       const potentialTracks = artistTopTracks
         .flatMap(artistTrack => artistTrack.tracks)
@@ -314,11 +314,8 @@ useEffect(() => {
           // Exclude if:
           // 1. Already seen in this recommendation batch
           // 2. In the excluded tracks set
-          // 3. From the same artist as top tracks
           if (seenTrackIds.has(track.id) || 
-              excludedTrackIds.has(track.id) || 
-              topTracks.some(topTrack => 
-                topTrack.artists[0].id === track.artists[0].id)) {
+              excludedTrackIds.has(track.id)) {
             return false;
           }
           
