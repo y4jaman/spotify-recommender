@@ -35,45 +35,6 @@ const MusicDashboard = ({ token, onLogout }) => {
   const [isActive, setIsActive] = useState(false);
   const [playbackState, setPlaybackState] = useState(null);
 
-  useEffect(() => {
-    if (!token) return;
-  
-    // Load SDK script
-    const script = document.createElement("script");
-    script.src = "https://sdk.scdn.co/spotify-player.js";
-    script.async = true;
-    document.body.appendChild(script);
-  
-    window.onSpotifyWebPlaybackSDKReady = () => {
-      const player = new window.Spotify.Player({
-        name: 'Spotify Recommender Player',
-        getOAuthToken: cb => { cb(token); }
-      });
-  
-      // Error handling
-      player.addListener('initialization_error', ({ message }) => {
-        console.error('Failed to initialize:', message);
-      });
-  
-      player.addListener('ready', ({ device_id }) => {
-        console.log('Ready with Device ID:', device_id);
-        setDeviceId(device_id);
-      });
-  
-      player.connect();
-      setPlayer(player);
-    };
-  
-    return () => {
-      if (player) {
-        player.disconnect();
-      }
-
-      document.body.removeChild(script);
-    window.onSpotifyWebPlaybackSDKReady = null;
-    };
-  }, [token]);
-
   const handleLike = async (trackId) => {
     try {
       const isLiked = likedTracks.has(trackId);
@@ -208,6 +169,37 @@ useEffect(() => {
       checkLikedStatus();
     }
   }, [token, userTopTracks, recommendations, recentlyPlayed]);
+
+  useEffect(() => {
+    if (token) {
+      // Load the Spotify Web Playback SDK
+      const script = document.createElement("script");
+      script.src = "https://sdk.scdn.co/spotify-player.js";
+      script.async = true;
+      document.body.appendChild(script);
+
+      window.onSpotifyWebPlaybackSDKReady = () => {
+        const player = new window.Spotify.Player({
+          name: 'Spotify Recommender Player',
+          getOAuthToken: cb => { cb(token); }
+        });
+
+        // Error handling
+        player.addListener('initialization_error', ({ message }) => {
+          console.error('Failed to initialize:', message);
+        });
+
+        player.addListener('ready', ({ device_id }) => {
+          console.log('Ready with Device ID:', device_id);
+          setDeviceId(device_id);
+        });
+
+        player.connect();
+        setPlayer(player);
+      };
+    }
+  }, [token]);
+
   const initializeData = async () => {
     setLoading(true);
     try {
@@ -277,17 +269,13 @@ useEffect(() => {
     if (!seedTracks?.length) return;
   
     try {
-      const params = new URLSearchParams();
-      params.append('limit', '20');
-      params.append('seed_tracks', seedTracks.join(','));
-      params.append('min_popularity', '20');
-      // Add market parameter
-      params.append('market', 'US');
+      const params = new URLSearchParams({
+        limit: '20',
+        seed_tracks: seedTracks.join(','),
+        min_popularity: '20'
+      });
   
-      const url = `https://api.spotify.com/v1/recommendations?${params}`;
-      console.log('Recommendations URL:', url);
-  
-      const response = await fetch(url, {
+      const response = await fetch(`https://api.spotify.com/v1/recommendations?${params}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
