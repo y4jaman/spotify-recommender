@@ -302,7 +302,6 @@ useEffect(() => {
 
 const handlePlayPause = async (track) => {
   try {
-    // First get available devices
     const deviceResponse = await fetch('https://api.spotify.com/v1/me/player/devices', {
       headers: {
         Authorization: `Bearer ${token}`
@@ -312,34 +311,47 @@ const handlePlayPause = async (track) => {
     if (!deviceResponse.ok) {
       throw new Error('Failed to get devices');
     }
-
+ 
     const deviceData = await deviceResponse.json();
-    const activeDevice = deviceData.devices.find(device => device.is_active);
-
-    if (!activeDevice) {
-      // No active device - open in Spotify instead
+    
+    // Find Spotify app or web player
+    const preferredDevice = deviceData.devices.find(
+      device => device.is_active || device.type === 'Computer' || device.type === 'Smartphone'
+    );
+ 
+    if (!preferredDevice) {
       window.open(track.external_urls.spotify, '_blank');
       return;
     }
-
-    if (currentTrack?.id === track.id && isActive) {
-      // Pause the current track
-      const response = await fetch(`https://api.spotify.com/v1/me/player/pause?device_id=${activeDevice.id}`, {
+ 
+    // Transfer playback to preferred device if not active
+    if (!preferredDevice.is_active) {
+      await fetch('https://api.spotify.com/v1/me/player', {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          device_ids: [preferredDevice.id],
+          play: false
+        })
+      });
+    }
+ 
+    if (currentTrack?.id === track.id && isActive) {
+      const response = await fetch(`https://api.spotify.com/v1/me/player/pause`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
         }
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to pause');
-      }
-
+ 
+      if (!response.ok) throw new Error('Failed to pause');
       setIsActive(false);
+      
     } else {
-      // Play the new track
-      const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${activeDevice.id}`, {
+      const response = await fetch(`https://api.spotify.com/v1/me/player/play`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -349,20 +361,16 @@ const handlePlayPause = async (track) => {
           uris: [track.uri]
         })
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to play');
-      }
-
+ 
+      if (!response.ok) throw new Error('Failed to play');
       setCurrentTrack(track);
       setIsActive(true);
     }
   } catch (error) {
     console.error('Playback error:', error);
-    // Fallback to opening in Spotify
     window.open(track.external_urls.spotify, '_blank');
   }
-};
+ };
 
   // Loading state with timeout
   useEffect(() => {
