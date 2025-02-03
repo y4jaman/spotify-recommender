@@ -188,36 +188,6 @@ useEffect(() => {
     }
   }, [token, userTopTracks, recommendations, recentlyPlayed]);
 
-  useEffect(() => {
-    if (token) {
-      // Load the Spotify Web Playback SDK
-      const script = document.createElement("script");
-      script.src = "https://sdk.scdn.co/spotify-player.js";
-      script.async = true;
-      document.body.appendChild(script);
-
-      window.onSpotifyWebPlaybackSDKReady = () => {
-        const player = new window.Spotify.Player({
-          name: 'Spotify Recommender Player',
-          getOAuthToken: cb => { cb(token); }
-        });
-
-        // Error handling
-        player.addListener('initialization_error', ({ message }) => {
-          console.error('Failed to initialize:', message);
-        });
-
-        player.addListener('ready', ({ device_id }) => {
-          console.log('Ready with Device ID:', device_id);
-          setDeviceId(device_id);
-        });
-
-        player.connect();
-        setPlayer(player);
-      };
-    }
-  }, [token]);
-
   const initializeData = async () => {
     setLoading(true);
     try {
