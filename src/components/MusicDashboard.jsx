@@ -38,11 +38,29 @@ const MusicDashboard = ({ token, onLogout }) => {
   useEffect(() => {
     if (!token) return;
   
+    // Load SDK script
+    const script = document.createElement("script");
+    script.src = "https://sdk.scdn.co/spotify-player.js";
+    script.async = true;
+    document.body.appendChild(script);
+  
     window.onSpotifyWebPlaybackSDKReady = () => {
       const player = new window.Spotify.Player({
         name: 'Spotify Recommender Player',
         getOAuthToken: cb => { cb(token); }
       });
+  
+      // Error handling
+      player.addListener('initialization_error', ({ message }) => {
+        console.error('Failed to initialize:', message);
+      });
+  
+      player.addListener('ready', ({ device_id }) => {
+        console.log('Ready with Device ID:', device_id);
+        setDeviceId(device_id);
+      });
+  
+      player.connect();
       setPlayer(player);
     };
   
@@ -187,7 +205,6 @@ useEffect(() => {
       checkLikedStatus();
     }
   }, [token, userTopTracks, recommendations, recentlyPlayed]);
-
   const initializeData = async () => {
     setLoading(true);
     try {
