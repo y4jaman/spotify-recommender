@@ -296,23 +296,32 @@ useEffect(() => {
       
       const artistTopTracks = await Promise.all(artistTrackPromises);
       
-      // Flatten tracks and apply filtering
-      const seenTrackIds = new Set();
+      // Comprehensive set of track IDs to exclude
       const excludedTrackIds = new Set([
         ...topTracks.map(track => track.id),
         ...recentlyPlayedIds,
         ...savedTrackIds
       ]);
       
+      // Flatten tracks and apply advanced filtering
+      const seenTrackIds = new Set();
       const potentialTracks = artistTopTracks
         .flatMap(artistTrack => artistTrack.tracks)
         .filter(track => {
-          // Remove duplicates, excluded tracks, and ensure track exists and has an ID
-          if (!track || !track.id || 
-              seenTrackIds.has(track.id) || 
-              excludedTrackIds.has(track.id)) {
+          // Rigorous filtering conditions
+          if (!track || !track.id) return false;
+          
+          // Exclude if:
+          // 1. Already seen in this recommendation batch
+          // 2. In the excluded tracks set
+          // 3. From the same artist as top tracks
+          if (seenTrackIds.has(track.id) || 
+              excludedTrackIds.has(track.id) || 
+              topTracks.some(topTrack => 
+                topTrack.artists[0].id === track.artists[0].id)) {
             return false;
           }
+          
           seenTrackIds.add(track.id);
           return true;
         })
