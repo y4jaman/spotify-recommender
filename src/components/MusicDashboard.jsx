@@ -237,6 +237,12 @@ useEffect(() => {
   
   const fetchRecommendations = async (seedTracks) => {
     if (!seedTracks?.length) return;
+
+    console.log('Authorization Token:', token);
+  if (!token) {
+    console.error("No token provided!");
+    return;
+  }
   
     try {
       const params = new URLSearchParams({
