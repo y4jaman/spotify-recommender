@@ -225,30 +225,26 @@ useEffect(() => {
         return;
       }
   
+      // Set user top tracks first
       setUserTopTracks(data.items);
       
-      await fetchNewRecommendations();
+      // Prepare for recommendations
+      const recentlyPlayedIds = recentlyPlayed.map(track => track.id);
+      const savedTrackIds = Array.from(likedTracks);
+      
+      // Call recommendations with necessary context
+      await fetchNewRecommendations(data.items, recentlyPlayedIds, savedTrackIds);
   
     } catch (error) {
       console.error('Error in fetchUserTopTracks:', error);
     }
   };
   
-  const fetchNewRecommendations = async () => {
+  // Update the fetchNewRecommendations function
+  const fetchNewRecommendations = async (topTracks, recentlyPlayedIds, savedTrackIds) => {
     try {
-      // Get user's top tracks
-      const topTracksResponse = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=50', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (!topTracksResponse.ok) {
-        throw new Error(`Top tracks fetch failed: ${topTracksResponse.status}`);
-      }
-      
-      const topTracks = await topTracksResponse.json();
-      
       // Get artist information for top tracks
-      const artistIds = [...new Set(topTracks.items.map(track => track.artists[0].id))].slice(0, 5);
+      const artistIds = [...new Set(topTracks.map(track => track.artists[0].id))].slice(0, 5);
       
       // Fetch top tracks for these artists
       const artistTrackPromises = artistIds.map(async (artistId) => {
@@ -273,11 +269,19 @@ useEffect(() => {
       
       // Flatten tracks and apply filtering
       const seenTrackIds = new Set();
+      const excludedTrackIds = new Set([
+        ...topTracks.map(track => track.id),
+        ...recentlyPlayedIds,
+        ...savedTrackIds
+      ]);
+      
       const potentialTracks = artistTopTracks
         .flatMap(artistTrack => artistTrack.tracks)
         .filter(track => {
-          // Remove duplicates and ensure track exists and has an ID
-          if (!track || !track.id || seenTrackIds.has(track.id)) {
+          // Remove duplicates, excluded tracks, and ensure track exists and has an ID
+          if (!track || !track.id || 
+              seenTrackIds.has(track.id) || 
+              excludedTrackIds.has(track.id)) {
             return false;
           }
           seenTrackIds.add(track.id);
@@ -286,29 +290,16 @@ useEffect(() => {
         .sort((a, b) => b.popularity - a.popularity)
         .slice(0, 50);
       
-      // Update state with recommendations
-      if (typeof setRecommendations === 'function') {
-        setRecommendations(potentialTracks);
-      } else {
-        console.warn('setRecommendations is not a function');
-      }
+      // Update recommendations state
+      setRecommendations(potentialTracks);
       
       return potentialTracks;
       
     } catch (error) {
       console.error('Error generating recommendations:', error);
-      
-      // Check if setError is a function before calling
-      if (typeof setError === 'function') {
-        setError('Failed to fetch recommendations. Please try again.');
-      } else {
-        console.warn('setError is not a function');
-      }
-      
       return [];
     }
   };
-
   const fetchRecentlyPlayed = async () => {
     try {
       console.log('Fetching recently played...');
