@@ -234,40 +234,46 @@ useEffect(() => {
       console.error('Error in fetchUserTopTracks:', error);
     }
   };
-
+  
   const fetchRecommendations = async (seedTracks) => {
     if (!seedTracks?.length) return;
   
     try {
       const params = new URLSearchParams({
         limit: '20',
-        seed_tracks: seedTracks[0],
-        market: 'US',
-        max_popularity: 100,
-        min_popularity: 0
+        seed_tracks: seedTracks.join(','),
+        min_popularity: '20', // Ensure it's an integer, not a string
+        market: 'US'
       });
   
-      const response = await fetch('https://api.spotify.com/v1/recommendations?' + params, {
+      // Log the URL for debugging
+      console.log('Recommendations URL:', `https://api.spotify.com/v1/recommendations?${params}`);
+  
+      const response = await fetch(`https://api.spotify.com/v1/recommendations?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
+          'Content-Type': 'application/json'
         }
       });
   
-      console.log('Response status:', response.status);
-      const text = await response.text();
-      console.log('Response text:', text);
-  
       if (!response.ok) {
-        throw new Error(`Recommendations error! status: ${response.status}`);
+        // Log the error response body for more details
+        const errorData = await response.json();
+        console.error('Error response:', errorData);
+        throw new Error(`Recommendations error! status: ${response.status} - ${errorData.error.message}`);
       }
   
-      const data = JSON.parse(text);
-      setRecommendations(data.tracks || []);
+      const data = await response.json();
+      console.log('Recommendations data:', data);
+  
+      if (data.tracks?.length) {
+        setRecommendations(data.tracks);
+      }
     } catch (error) {
-      console.error('Full error details:', error);
+      console.error('Error fetching recommendations:', error);
     }
   };
+  
 
   const fetchRecentlyPlayed = async () => {
     try {
