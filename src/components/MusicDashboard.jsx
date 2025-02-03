@@ -30,10 +30,7 @@ const MusicDashboard = ({ token, onLogout }) => {
   const [userData, setUserData] = useState(null);
   const [selectedTab, setSelectedTab] = useState('recommendations');
   const [likedTracks, setLikedTracks] = useState(new Set());
-  const [player, setPlayer] = useState(null);
-  const [deviceId, setDeviceId] = useState(null);
   const [isActive, setIsActive] = useState(false);
-  const [playbackState, setPlaybackState] = useState(null);
 
   const handleLike = async (trackId) => {
     try {
@@ -71,20 +68,52 @@ const MusicDashboard = ({ token, onLogout }) => {
 };
 
 const checkSavedTracks = async (trackIds) => {
+  // Limit the number of tracks to check in a single request
+  const MAX_TRACKS_PER_REQUEST = 50;
+  
   try {
-    const response = await fetch(`https://api.spotify.com/v1/me/tracks/contains?ids=${trackIds.join(',')}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-    const data = await response.json();
+    // Split track IDs into chunks of 50
+    const trackIdChunks = [];
+    for (let i = 0; i < trackIds.length; i += MAX_TRACKS_PER_REQUEST) {
+      trackIdChunks.push(trackIds.slice(i, i + MAX_TRACKS_PER_REQUEST));
+    }
+    
     const newLikedTracks = new Set(likedTracks);
-    data.forEach((isSaved, index) => {
-      if (isSaved) {
-        newLikedTracks.add(trackIds[index]);
+    
+    // Process each chunk of track IDs
+    for (const chunk of trackIdChunks) {
+      try {
+        const response = await fetch(`https://api.spotify.com/v1/me/tracks/contains?ids=${chunk.join(',')}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          console.error(`Failed to check saved tracks. Status: ${response.status}`);
+          continue;
+        }
+        
+        const data = await response.json();
+        
+        // Ensure data is an array before processing
+        if (Array.isArray(data)) {
+          data.forEach((isSaved, index) => {
+            if (isSaved) {
+              newLikedTracks.add(chunk[index]);
+            }
+          });
+        } else {
+          console.error('Unexpected response format for saved tracks', data);
+        }
+      } catch (chunkError) {
+        console.error('Error checking track chunk:', chunkError);
       }
-    });
+    }
+    
+    // Update liked tracks state
     setLikedTracks(newLikedTracks);
+    
   } catch (error) {
     console.error('Error checking saved tracks:', error);
   }
@@ -300,6 +329,7 @@ useEffect(() => {
       return [];
     }
   };
+
   const fetchRecentlyPlayed = async () => {
     try {
       console.log('Fetching recently played...');
