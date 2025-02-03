@@ -241,37 +241,51 @@ useEffect(() => {
       const topTracksResponse = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=50', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      if (!topTracksResponse.ok) {
+        throw new Error(`Top tracks fetch failed: ${topTracksResponse.status}`);
+      }
+      
       const topTracks = await topTracksResponse.json();
-   
+      
       // Get recently played to filter out
       const recentlyPlayedResponse = await fetch('https://api.spotify.com/v1/me/player/recently-played?limit=50', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      if (!recentlyPlayedResponse.ok) {
+        throw new Error(`Recently played fetch failed: ${recentlyPlayedResponse.status}`);
+      }
+      
       const recentlyPlayed = await recentlyPlayedResponse.json();
       const heardTrackIds = new Set(recentlyPlayed.items.map(item => item.track.id));
-   
-      // Get playlists containing top tracks
-      const playlistPromises = topTracks.items.slice(0, 5).map(track => 
-        fetch(`https://api.spotify.com/v1/playlists/${track.id}/tracks`, {
+      
+      // Get artist information for top tracks
+      const artistIds = [...new Set(topTracks.items.map(track => track.artists[0].id))].slice(0, 5);
+      
+      // Fetch top tracks for these artists
+      const artistTrackPromises = artistIds.map(artistId => 
+        fetch(`https://api.spotify.com/v1/artists/${artistId}/top-tracks?market=US`, {
           headers: { Authorization: `Bearer ${token}` }
         }).then(res => res.json())
       );
       
-      const playlistTracks = await Promise.all(playlistPromises);
-   
-      // Filter and score tracks
-      const recommendedTracks = playlistTracks
-        .flatMap(playlist => playlist.items.map(item => item.track))
+      const artistTopTracks = await Promise.all(artistTrackPromises);
+      
+      // Flatten and filter tracks
+      const potentialTracks = artistTopTracks
+        .flatMap(artistTrack => artistTrack.tracks)
         .filter(track => !heardTrackIds.has(track.id))
         .sort((a, b) => b.popularity - a.popularity)
         .slice(0, 20);
-   
-      setRecommendations(recommendedTracks);
-   
+      
+      setRecommendations(potentialTracks);
+      
     } catch (error) {
       console.error('Error generating recommendations:', error);
+      setError('Failed to fetch recommendations. Please try again.');
     }
-   };
+  };
 
   const fetchRecentlyPlayed = async () => {
     try {
