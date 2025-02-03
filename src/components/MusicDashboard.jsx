@@ -227,59 +227,51 @@ useEffect(() => {
   
       setUserTopTracks(data.items);
       
-      const seedTracks = data.items.slice(0, 5).map(track => track.id);
-      await fetchRecommendations(seedTracks);
+      await fetchNewRecommendations();
   
     } catch (error) {
       console.error('Error in fetchUserTopTracks:', error);
     }
   };
   
-  const fetchRecommendations = async (seedTracks) => {
-    if (!seedTracks?.length) return;
-
-    console.log('Authorization Token:', token);
-  if (!token) {
-    console.error("No token provided!");
-    return;
-  }
-  
+ 
+  const fetchNewRecommendations = async () => {
     try {
-      const params = new URLSearchParams({
-        limit: '20',
-        seed_tracks: seedTracks.join(','),
-        min_popularity: '20', // Ensure it's an integer, not a string
-        market: 'US'
+      // Get user's top tracks
+      const topTracksResponse = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=50', {
+        headers: { Authorization: `Bearer ${token}` }
       });
-  
-      // Log the URL for debugging
-      console.log('Recommendations URL:', `https://api.spotify.com/v1/recommendations?${params}`);
-  
-      const response = await fetch(`https://api.spotify.com/v1/recommendations?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const topTracks = await topTracksResponse.json();
+   
+      // Get recently played to filter out
+      const recentlyPlayedResponse = await fetch('https://api.spotify.com/v1/me/player/recently-played?limit=50', {
+        headers: { Authorization: `Bearer ${token}` }
       });
-  
-      if (!response.ok) {
-        // Log the error response body for more details
-        const errorData = await response.json();
-        console.error('Error response:', errorData);
-        throw new Error(`Recommendations error! status: ${response.status} - ${errorData.error.message}`);
-      }
-  
-      const data = await response.json();
-      console.log('Recommendations data:', data);
-  
-      if (data.tracks?.length) {
-        setRecommendations(data.tracks);
-      }
+      const recentlyPlayed = await recentlyPlayedResponse.json();
+      const heardTrackIds = new Set(recentlyPlayed.items.map(item => item.track.id));
+   
+      // Get playlists containing top tracks
+      const playlistPromises = topTracks.items.slice(0, 5).map(track => 
+        fetch(`https://api.spotify.com/v1/playlists/${track.id}/tracks`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(res => res.json())
+      );
+      
+      const playlistTracks = await Promise.all(playlistPromises);
+   
+      // Filter and score tracks
+      const recommendedTracks = playlistTracks
+        .flatMap(playlist => playlist.items.map(item => item.track))
+        .filter(track => !heardTrackIds.has(track.id))
+        .sort((a, b) => b.popularity - a.popularity)
+        .slice(0, 20);
+   
+      setRecommendations(recommendedTracks);
+   
     } catch (error) {
-      console.error('Error fetching recommendations:', error);
+      console.error('Error generating recommendations:', error);
     }
-  };
-  
+   };
 
   const fetchRecentlyPlayed = async () => {
     try {
