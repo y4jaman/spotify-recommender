@@ -270,10 +270,22 @@ useEffect(() => {
   };
   
   // Update the fetchNewRecommendations function
-  const fetchNewRecommendations = async (topTracks, recentlyPlayedIds, savedTrackIds) => {
+  const fetchNewRecommendations = async () => {
     try {
+      // Ensure we have the latest track IDs to exclude
+      const recentlyPlayedIds = new Set(recentlyPlayed.map(track => track.id));
+      const savedTrackIds = likedTracks;
+      const topTrackIds = new Set(userTopTracks.map(track => track.id));
+  
+      // Combine all IDs to exclude
+      const excludedTrackIds = new Set([
+        ...recentlyPlayedIds,
+        ...savedTrackIds,
+        ...topTrackIds
+      ]);
+  
       // Get artist information for top tracks
-      const artistIds = [...new Set(topTracks.map(track => track.artists[0].id))].slice(0, 5);
+      const artistIds = [...new Set(userTopTracks.map(track => track.artists[0].id))].slice(0, 5);
       
       // Fetch top tracks for these artists
       const artistTrackPromises = artistIds.map(async (artistId) => {
@@ -298,19 +310,14 @@ useEffect(() => {
       
       // Flatten tracks and apply filtering
       const seenTrackIds = new Set();
-      const excludedTrackIds = new Set([
-        ...topTracks.map(track => track.id),
-        ...recentlyPlayedIds,
-        ...savedTrackIds
-      ]);
-      
       const potentialTracks = artistTopTracks
         .flatMap(artistTrack => artistTrack.tracks)
         .filter(track => {
-          // Remove duplicates, excluded tracks, and ensure track exists and has an ID
-          if (!track || !track.id || 
-              seenTrackIds.has(track.id) || 
-              excludedTrackIds.has(track.id)) {
+          // Rigorous filtering to remove duplicates and excluded tracks
+          if (!track || 
+              !track.id || 
+              excludedTrackIds.has(track.id) || 
+              seenTrackIds.has(track.id)) {
             return false;
           }
           seenTrackIds.add(track.id);
