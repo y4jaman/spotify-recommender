@@ -68,6 +68,9 @@ const MusicDashboard = ({ token, onLogout }) => {
       if (player) {
         player.disconnect();
       }
+
+      document.body.removeChild(script);
+    window.onSpotifyWebPlaybackSDKReady = null;
     };
   }, [token]);
 
@@ -274,13 +277,17 @@ useEffect(() => {
     if (!seedTracks?.length) return;
   
     try {
-      const params = new URLSearchParams({
-        limit: '20',
-        seed_tracks: seedTracks.join(','),
-        min_popularity: '20'
-      });
+      const params = new URLSearchParams();
+      params.append('limit', '20');
+      params.append('seed_tracks', seedTracks.join(','));
+      params.append('min_popularity', '20');
+      // Add market parameter
+      params.append('market', 'US');
   
-      const response = await fetch(`https://api.spotify.com/v1/recommendations?${params}`, {
+      const url = `https://api.spotify.com/v1/recommendations?${params}`;
+      console.log('Recommendations URL:', url);
+  
+      const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`
         }
