@@ -239,21 +239,17 @@ useEffect(() => {
     if (!seedTracks?.length) return;
   
     try {
+      // Use only one seed track for testing
       const params = new URLSearchParams({
         limit: '20',
-        seed_tracks: seedTracks.join(','),
-        min_popularity: '20',
-        market: 'US'  // Add market parameter
+        seed_tracks: seedTracks[0], // Use single seed track initially
+        market: 'US'
       });
   
-      // Log the URL for debugging
-      console.log('Recommendations URL:', `https://api.spotify.com/v1/recommendations?${params}`);
+      console.log('Using seed track:', seedTracks[0]);
   
       const response = await fetch(`https://api.spotify.com/v1/recommendations?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
   
       if (!response.ok) {
@@ -261,15 +257,11 @@ useEffect(() => {
       }
   
       const data = await response.json();
-      console.log('Recommendations data:', data);
-      if (data.tracks?.length) {
-        setRecommendations(data.tracks);
-      }
+      setRecommendations(data.tracks || []);
     } catch (error) {
       console.error('Error fetching recommendations:', error);
     }
   };
-
   const fetchRecentlyPlayed = async () => {
     try {
       console.log('Fetching recently played...');
